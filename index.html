@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EcoCampus | 校園碳足跡平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; }
+  </style>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-slate-900 text-white flex flex-col">
+    <div class="p-6 flex items-center gap-2 text-green-400">
+      <i data-lucide="leaf"></i>
+      <span class="text-xl font-bold italic text-white">EcoCampus</span>
+    </div>
+
+    <nav class="flex-1 px-4 space-y-2" id="sideNav">
+      <a href="#" data-page="dashboard" class="nav-item flex items-center gap-3 p-3 bg-green-600 rounded-xl transition">
+        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+        <span>總覽儀表板</span>
+      </a>
+      <a href="#" data-page="records" class="nav-item flex items-center gap-3 p-3 hover:bg-slate-800 rounded-xl transition text-gray-400 hover:text-white">
+        <i data-lucide="pen-tool" class="w-5 h-5"></i>
+        <span>行為紀錄</span>
+      </a>
+      <a href="#" data-page="simulator" class="nav-item flex items-center gap-3 p-3 hover:bg-slate-800 rounded-xl transition text-gray-400 hover:text-white">
+        <i data-lucide="calculator" class="w-5 h-5"></i>
+        <span>減碳模擬器</span>
+      </a>
+      <a href="#" data-page="leaderboard" class="nav-item flex items-center gap-3 p-3 hover:bg-slate-800 rounded-xl transition text-gray-400 hover:text-white">
+        <i data-lucide="trophy" class="w-5 h-5"></i>
+        <span>綠色排行榜</span>
+      </a>
+      <a href="#" data-page="database" class="nav-item flex items-center gap-3 p-3 hover:bg-slate-800 rounded-xl transition text-gray-400 hover:text-white">
+        <i data-lucide="database" class="w-5 h-5"></i>
+        <span>碳排資料庫</span>
+      </a>
+    </nav>
+
+    <div class="p-4 border-t border-slate-800">
+      <div class="flex items-center gap-2 text-sm text-gray-400">
+        <i data-lucide="user" class="w-4 h-4"></i>
+        <span>陳小明 (學生)</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 overflow-y-auto p-8">
+    <header class="flex justify-between items-center mb-8">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800" id="pageTitle">校園永續儀表板</h1>
+        <p class="text-gray-500">角色權限：<span class="text-green-600 font-semibold">學生端</span></p>
+      </div>
+      <div class="flex gap-4">
+        <button class="bg-white border p-2 rounded-lg hover:shadow-sm" title="通知">
+          <i data-lucide="bell" class="w-5 h-5 text-gray-600"></i>
+        </button>
+        <button class="bg-white border px-4 py-2 rounded-lg text-gray-700 font-medium" title="示意按鈕">
+          切換為教師/管理
+        </button>
+      </div>
+    </header>
+
+    <!-- Dashboard -->
+    <section id="page-dashboard" class="page active">
+      <section class="bg-white p-6 rounded-2xl shadow-sm border border-green-100 mb-8">
+        <div class="flex items-center gap-2 mb-4 text-green-700 font-bold">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
+          <span>AI 行為推估模型 (NLP)</span>
+        </div>
+        <div class="flex flex-col md:flex-row gap-4">
+          <input type="text" id="aiInput" placeholder="描述你的行為，例如：今天從宿舍走到教室，午餐吃素便當、抽菸 2 根..."
+            class="flex-1 border-2 border-gray-100 p-4 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent outline-none transition" />
+          <button id="btnAI" class="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 transition">
+            解析並新增
+          </button>
+        </div>
+        <div id="aiResult" class="hidden mt-4 p-3 bg-green-50 rounded-lg text-sm text-green-800 border border-green-200 italic"></div>
+      </section>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border-t-4 border-green-500">
+          <h4 class="text-gray-400 text-sm mb-1">今日碳排</h4>
+          <div class="text-2xl font-bold"><span id="kpiToday">0.00</span> <span class="text-sm font-normal text-gray-500">kgCO₂e</span></div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border-t-4 border-blue-500">
+          <h4 class="text-gray-400 text-sm mb-1">本週累積</h4>
+          <div class="text-2xl font-bold"><span id="kpiWeek">0.00</span> <span class="text-sm font-normal text-gray-500">kgCO₂e</span></div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border-t-4 border-amber-500">
+          <h4 class="text-gray-400 text-sm mb-1">減碳積分</h4>
+          <div class="text-2xl font-bold text-amber-600"><span id="kpiPoints">0</span> Pts</div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border-t-4 border-purple-500 text-center">
+          <h4 class="text-gray-400 text-sm mb-2">SDGs 達成度</h4>
+          <div class="flex justify-center gap-2">
+            <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">SDG 12</span>
+            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">SDG 13</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white p-6 rounded-2xl shadow-sm">
+          <h3 class="font-bold text-gray-700 mb-4">碳排趨勢 (最近 7 天)</h3>
+          <canvas id="trendChart" height="200"></canvas>
+          <p class="text-xs text-gray-400 mt-3">＊日期以本地時間計算，確保「今天」一定會出現在最近 7 天內。</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm">
+          <h3 class="font-bold text-gray-700 mb-4">行為類別分佈</h3>
+          <div class="max-w-[280px] mx-auto">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Records -->
+    <section id="page-records" class="page">
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <div class="lg:col-span-2">
+          <div class="bg-white p-6 rounded-2xl shadow-sm mb-8">
+            <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2">
+              <i data-lucide="plus-circle" class="w-5 h-5 text-green-600"></i>
+              新增紀錄
+            </h3>
+
+            <div class="space-y-4">
+              <div>
+                <label class="text-sm text-gray-600">日期</label>
+                <input id="recDate" type="date" class="w-full mt-1 border p-3 rounded-xl" />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-600">類別</label>
+                <select id="recCategory" class="w-full mt-1 border p-3 rounded-xl"></select>
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-600">項目</label>
+                <select id="recType" class="w-full mt-1 border p-3 rounded-xl"></select>
+                <p class="text-xs text-gray-400 mt-1" id="recFactorHint"></p>
+              </div>
+
+              <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-2">
+                  <label class="text-sm text-gray-600">數量 / 時數 / 里程</label>
+                  <input id="recAmount" type="number" step="0.01" min="0" class="w-full mt-1 border p-3 rounded-xl" placeholder="例如：3.5" />
+                </div>
+                <div>
+                  <label class="text-sm text-gray-600">單位</label>
+                  <input id="recUnit" type="text" class="w-full mt-1 border p-3 rounded-xl bg-gray-50" disabled />
+                </div>
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-600">備註（可選）</label>
+                <input id="recNote" type="text" class="w-full mt-1 border p-3 rounded-xl" placeholder="例如：去圖書館" />
+              </div>
+
+              <button id="btnAddRecord" class="w-full bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition">
+                新增到紀錄
+              </button>
+              <p id="recAddMsg" class="text-sm text-gray-500"></p>
+            </div>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl shadow-sm">
+            <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2">
+              <i data-lucide="download" class="w-5 h-5 text-slate-700"></i>
+              匯出 / 匯入
+            </h3>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <button id="btnExport" class="bg-slate-900 text-white px-4 py-2 rounded-xl">匯出 JSON</button>
+              <label class="bg-white border px-4 py-2 rounded-xl cursor-pointer text-gray-700">
+                匯入 JSON
+                <input id="importFile" type="file" accept="application/json" class="hidden" />
+              </label>
+              <button id="btnReset" class="bg-white border px-4 py-2 rounded-xl text-red-600">清空資料</button>
+            </div>
+            <p class="text-xs text-gray-400 mt-3">＊資料儲存在瀏覽器 localStorage（Demo 版）。</p>
+          </div>
+        </div>
+
+        <div class="lg:col-span-3">
+          <div class="bg-white p-6 rounded-2xl shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-4">
+              <div>
+                <h3 class="font-bold text-gray-700">我的行為紀錄</h3>
+                <p class="text-sm text-gray-500">可篩選、搜尋、刪除</p>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label class="text-xs text-gray-500">類別</label>
+                  <select id="filterCategory" class="w-full mt-1 border p-2 rounded-xl"></select>
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500">搜尋</label>
+                  <input id="filterText" type="text" class="w-full mt-1 border p-2 rounded-xl" placeholder="例如：捷運 / 抽菸" />
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500">日期</label>
+                  <input id="filterDate" type="date" class="w-full mt-1 border p-2 rounded-xl" />
+                </div>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table class="min-w-full text-sm">
+                <thead>
+                  <tr class="text-left text-gray-500 border-b">
+                    <th class="py-2 pr-3">日期</th>
+                    <th class="py-2 pr-3">類別</th>
+                    <th class="py-2 pr-3">項目</th>
+                    <th class="py-2 pr-3">數量</th>
+                    <th class="py-2 pr-3">kgCO₂e</th>
+                    <th class="py-2 pr-3">備註</th>
+                    <th class="py-2 pr-3">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="recordsTbody"></tbody>
+              </table>
+            </div>
+            <p class="text-xs text-gray-400 mt-3">＊係數可在「碳排資料庫」頁調整，調整後會重新計算所有紀錄。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Simulator -->
+    <section id="page-simulator" class="page">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-green-100 mb-8">
+        <div class="flex items-start md:items-center justify-between flex-col md:flex-row gap-3">
+          <div>
+            <h3 class="font-bold text-gray-700 text-lg flex items-center gap-2">
+              <i data-lucide="calculator" class="w-5 h-5 text-green-600"></i>
+              減碳模擬器
+            </h3>
+            <p class="text-sm text-gray-500">選擇你想做的改變，立即估算「每週」與「每年」可減少的碳排放量。</p>
+          </div>
+          <button id="btnRunSim" class="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition">計算減碳量</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 space-y-6">
+
+          <!-- Reduce red meat -->
+          <div class="bg-white p-6 rounded-2xl shadow-sm">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <i data-lucide="utensils" class="w-5 h-5 text-amber-600"></i>
+                <h4 class="font-bold text-gray-700">減少紅肉用餐次數</h4>
+              </div>
+              <label class="flex items-center gap-2 text-sm text-gray-600">
+                <input id="simMeatEnabled" type="checkbox" class="accent-green-600" checked />
+                啟用
+              </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div>
+                <label class="text-xs text-gray-500">每週少吃紅肉（次）</label>
+                <input id="simMeatMeals" type="number" min="0" step="1" class="w-full mt-1 border p-3 rounded-xl" value="2" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-500">紅肉餐係數（kgCO₂e/次）</label>
+                <input id="simMeatFactor" type="number" min="0" step="0.01" class="w-full mt-1 border p-3 rounded-xl" />
+                <p class="text-xs text-gray-400 mt-1">預設取自「碳排資料庫」的「紅肉餐」。</p>
+              </div>
+              <div>
+                <label class="text-xs text-gray-500">替代餐係數（kgCO₂e/次）</label>
+                <input id="simAltMealFactor" type="number" min="0" step="0.01" class="w-full mt-1 border p-3 rounded-xl" />
+                <p class="text-xs text-gray-400 mt-1">預設取自「碳排資料庫」的「蔬食餐」。</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- AC battery -->
+          <div class="bg-white p-6 rounded-2xl shadow-sm">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <i data-lucide="snowflake" class="w-5 h-5 text-blue-600"></i>
+                <h4 class="font-bold text-gray-700">冷氣改成電瓶冷氣（低碳供電）</h4>
+              </div>
+              <label class="flex items-center gap-2 text-sm text-gray-600">
+                <input id="simAcEnabled" type="checkbox" class="accent-green-600" checked />
+                啟用
+              </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div>
+                <label class="text-xs text-gray-500">每週冷氣用電（kWh）</label>
+                <input id="simAcKwh" type="number" min="0" step="0.1" class="w-full mt-1 border p-3 rounded-xl" value="10" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-500">原供電係數（kgCO₂e/kWh）</label>
+                <input id="simGridFactor" type="number" min="0" step="0.001" class="w-full mt-1 border p-3 rounded-xl" />
+                <p class="text-xs text-gray-400 mt-1">預設取自「碳排資料庫」的「用電」。</p>
+              </div>
+              <div>
+                <label class="text-xs text-gray-500">電瓶冷氣係數（kgCO₂e/kWh）</label>
+                <input id="simBatteryFactor" type="number" min="0" step="0.001" class="w-full mt-1 border p-3 rounded-xl" value="0.05" />
+                <p class="text-xs text-gray-400 mt-1">可視為使用綠電/儲能後的等效係數（示意，可調）。</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Switch transport -->
+          <div class="bg-white p-6 rounded-2xl shadow-sm">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <i data-lucide="bus" class="w-5 h-5 text-green-700"></i>
+                <h4 class="font-bold text-gray-700">改搭大眾運輸工具</h4>
+              </div>
+              <label class="flex items-center gap-2 text-sm text-gray-600">
+                <input id="simTransEnabled" type="checkbox" class="accent-green-600" checked />
+                啟用
+              </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div>
+                <label class="text-xs text-gray-500">每週轉換里程（km）</label>
+                <input id="simKm" type="number" min="0" step="0.1" class="w-full mt-1 border p-3 rounded-xl" value="20" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-500">原交通方式</label>
+                <select id="simFromMode" class="w-full mt-1 border p-3 rounded-xl"></select>
+              </div>
+              <div>
+                <label class="text-xs text-gray-500">改為</label>
+                <select id="simToMode" class="w-full mt-1 border p-3 rounded-xl"></select>
+              </div>
+            </div>
+            <p class="text-xs text-gray-400 mt-3">＊係數使用「kgCO₂e / 公里」，可在資料庫頁調整各交通方式的排放係數。</p>
+          </div>
+
+        </div>
+
+        <!-- Results -->
+        <div class="lg:col-span-1">
+          <div class="bg-white p-6 rounded-2xl shadow-sm sticky top-6">
+            <h4 class="font-bold text-gray-700 mb-2">模擬結果</h4>
+            <p class="text-sm text-gray-500 mb-4">（以你輸入的改變量估算）</p>
+
+            <div class="space-y-3">
+              <div class="p-4 rounded-xl bg-green-50 border border-green-100">
+                <div class="text-xs text-gray-500">每週可減碳</div>
+                <div class="text-2xl font-bold text-green-700"><span id="simWeekly">0.00</span> <span class="text-sm font-normal">kgCO₂e</span></div>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-50 border">
+                <div class="text-xs text-gray-500">每年可減碳（×52 週）</div>
+                <div class="text-2xl font-bold text-slate-800"><span id="simYearly">0.00</span> <span class="text-sm font-normal">kgCO₂e</span></div>
+              </div>
+              <div class="p-4 rounded-xl bg-white border">
+                <div class="text-xs text-gray-500">相當於（示意）</div>
+                <ul class="text-sm text-gray-700 list-disc pl-5 space-y-1">
+                  <li>少開車約 <span class="font-semibold" id="simCarKm">0</span> km</li>
+                  <li>種樹約 <span class="font-semibold" id="simTrees">0</span> 棵/年</li>
+                </ul>
+                <p class="text-xs text-gray-400 mt-2">＊換算僅為示意（可在報告中標註假設）。</p>
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <h5 class="text-sm font-bold text-gray-700 mb-2">構成</h5>
+              <canvas id="simChart" height="220"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Leaderboard -->
+    <section id="page-leaderboard" class="page">
+      <div class="bg-white p-6 rounded-2xl shadow-sm">
+        <div class="flex items-center gap-2 mb-4">
+          <i data-lucide="trophy" class="w-5 h-5 text-amber-500"></i>
+          <h3 class="font-bold text-gray-700">綠色排行榜（示意）</h3>
+        </div>
+        <div class="table-wrap">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="text-left text-gray-500 border-b">
+                <th class="py-2 pr-3">排名</th>
+                <th class="py-2 pr-3">姓名</th>
+                <th class="py-2 pr-3">減碳積分</th>
+                <th class="py-2 pr-3">本週碳排</th>
+              </tr>
+            </thead>
+            <tbody id="leaderTbody"></tbody>
+          </table>
+        </div>
+        <p class="text-xs text-gray-400 mt-3">＊排行榜為 demo 資料，可改成串接後端 API。</p>
+      </div>
+    </section>
+
+    <!-- Database -->
+    <section id="page-database" class="page">
+      <div class="bg-white p-6 rounded-2xl shadow-sm mb-8">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-gray-700 flex items-center gap-2">
+              <i data-lucide="database" class="w-5 h-5 text-slate-700"></i>
+              碳排資料庫（排放係數）
+            </h3>
+            <p class="text-sm text-gray-500">可直接修改係數，系統會重新計算所有紀錄與圖表。</p>
+          </div>
+          <div class="flex gap-2">
+            <button id="btnSaveFactors" class="bg-slate-900 text-white px-4 py-2 rounded-xl">儲存係數</button>
+            <button id="btnResetFactors" class="bg-white border px-4 py-2 rounded-xl">還原預設</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="factorsContainer" class="space-y-6"></div>
+
+      <div class="bg-white p-6 rounded-2xl shadow-sm mt-8">
+        <h4 class="font-bold text-gray-700 mb-3">新增自訂項目</h4>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label class="text-xs text-gray-500">類別</label>
+            <select id="newFactorCategory" class="w-full mt-1 border p-3 rounded-xl"></select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500">名稱</label>
+            <input id="newFactorName" type="text" class="w-full mt-1 border p-3 rounded-xl" placeholder="例如：煙霧彈" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500">單位</label>
+            <input id="newFactorUnit" type="text" class="w-full mt-1 border p-3 rounded-xl" placeholder="顆" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500">係數（kgCO₂e/單位）</label>
+            <input id="newFactorValue" type="number" step="0.0001" min="0" class="w-full mt-1 border p-3 rounded-xl" placeholder="0.031" />
+          </div>
+        </div>
+        <button id="btnAddFactor" class="mt-4 bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition">新增</button>
+        <p class="text-xs text-gray-400 mt-3">＊新增後也會出現在「行為紀錄」的項目下拉選單。</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg"></div>
+
+  <script src="app.js"></script>
+  <script>
+    // Icons
+    lucide.createIcons();
+  </script>
+</body>
+</html>
